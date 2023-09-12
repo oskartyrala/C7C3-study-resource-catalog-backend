@@ -32,6 +32,65 @@ app.get("/health-check", async (_req, res) => {
     }
 });
 
+app.get("/resources", async (_req, res) => {
+    try {
+        const text = "SELECT * FROM resources ORDER BY date_added DESC";
+        const result = await client.query(text);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.get("/users", async (_req, res) => {
+    try {
+        const text = "SELECT * FROM users";
+        const result = await client.query(text);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.get("/tags", async (_req, res) => {
+    try {
+        const text = "SELECT tag FROM tags GROUP BY tag ORDER BY COUNT(*) DESC";
+        const result = await client.query(text);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.get("/tags/:resource_id", async (req, res) => {
+    try {
+        const { resource_id } = req.params;
+        const text = "SELECT * FROM tags WHERE resource_id = $1";
+        const values = [resource_id];
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.get("/study_list/:userid", async (req, res) => {
+    try {
+        const { userid } = req.params;
+        const text = "SELECT * FROM study_list WHERE user_id = $1";
+        const values = [userid];
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
 connectToDBAndStartListening();
 
 async function connectToDBAndStartListening() {
