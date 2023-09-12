@@ -91,6 +91,95 @@ app.get("/study_list/:userid", async (req, res) => {
     }
 });
 
+app.put("/resources/like/:resourceid", async (req, res) => {
+    try {
+        const { resourceid } = req.params;
+        const text =
+            "UPDATE resources SET likes_count = likes_count + 1 WHERE id = $1 RETURNING *";
+        const values = [resourceid];
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.put("/resources/dislike/:resourceid", async (req, res) => {
+    try {
+        const { resourceid } = req.params;
+        const text =
+            "UPDATE resources SET dislikes_count = dislikes_count + 1 WHERE id = $1 RETURNING *";
+        const values = [resourceid];
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.post("/resources/new", async (req, res) => {
+    try {
+        const {
+            resource_name,
+            author_name,
+            url,
+            description,
+            content_type,
+            build_phase,
+            recommender_id,
+            recommender_comment,
+            recommender_reason,
+        } = req.body;
+        const text =
+            "INSERT INTO resources (resource_name, author_name, url, description, content_type, build_phase, recommender_id, recommender_comment, recommender_reason) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *";
+        const values = [
+            resource_name,
+            author_name,
+            url,
+            description,
+            content_type,
+            build_phase,
+            recommender_id,
+            recommender_comment,
+            recommender_reason,
+        ];
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.post("/study_list/:userid/:resourceid", async (req, res) => {
+    try {
+        const { userid, resourceid } = req.params;
+        const text = "INSERT INTO study_list VALUES ($1, $2) RETURNING *";
+        const values = [userid, resourceid];
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.delete("/study_list/:userid/:resourceid", async (req, res) => {
+    try {
+        const { userid, resourceid } = req.params;
+        const text =
+            "DELETE FROM study_list WHERE user_id = $1 AND resource_id = $2 RETURNING *";
+        const values = [userid, resourceid];
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
 connectToDBAndStartListening();
 
 async function connectToDBAndStartListening() {
