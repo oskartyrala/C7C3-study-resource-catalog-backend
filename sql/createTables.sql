@@ -63,3 +63,11 @@ INSERT INTO users (name, is_faculty) VALUES ('Katie', true);
 INSERT INTO users (name, is_faculty) VALUES ('Nico', true);
 INSERT INTO users (name, is_faculty) VALUES ('Marta', true);
 INSERT INTO users (name, is_faculty) VALUES ('Lauren', true);
+
+INSERT INTO resources (resource_name, author_name, url, description, content_type, build_phase, recommender_id, recommender_comment, recommender_reason) 
+VALUES ('useReducer video tutorial', 'Web Dev Simplified', 'https://www.youtube.com/watch?v=kK_Wqx3RnHk', 'In this video I cover everything you need to know about the useReducer hook. I go over all the main use cases for useReducer as well as many common mistakes that developers make. This is part of a series of React videos where I cover all the important hooks in React.', 
+        'video', 12, 10, 'I recommend this resource after having used it.', 'This YTer has some nice tutorials on React and I found his useReducer one (with the article in description) helped me get to grips with it.');
+
+INSERT INTO tags VALUES (1, 'React');
+
+INSERT INTO study_list VALUES (1, 1);
