@@ -180,6 +180,19 @@ app.delete("/study_list/:userid/:resourceid", async (req, res) => {
     }
 });
 
+app.get("/user/:userid", async (req, res) => {
+    try {
+        const { userid } = req.params;
+        const text = "SELECT name FROM users WHERE id = $1";
+        const values = [userid];
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
 connectToDBAndStartListening();
 
 async function connectToDBAndStartListening() {
