@@ -71,3 +71,5 @@ VALUES ('useReducer video tutorial', 'Web Dev Simplified', 'https://www.youtube.
 INSERT INTO tags VALUES (1, 'React');
 
 INSERT INTO study_list VALUES (1, 1);
+
+SELECT name FROM users WHERE id = 1;
