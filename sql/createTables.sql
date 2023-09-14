@@ -73,3 +73,6 @@ INSERT INTO tags VALUES (1, 'React');
 INSERT INTO study_list VALUES (1, 1);
 
 SELECT name FROM users WHERE id = 1;
+
+SELECT r.*, ARRAY_AGG(t.tag) AS tags FROM resources r INNER JOIN tags t ON r.id = t.resource_id GROUP BY r.id;
+

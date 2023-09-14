@@ -34,7 +34,8 @@ app.get("/health-check", async (_req, res) => {
 
 app.get("/resources", async (_req, res) => {
     try {
-        const text = "SELECT * FROM resources ORDER BY date_added DESC";
+        const text =
+            "SELECT r.*, ARRAY_AGG(t.tag) AS tags FROM resources r INNER JOIN tags t ON r.id = t.resource_id GROUP BY r.id ORDER BY date_added DESC";
         const result = await client.query(text);
         res.status(200).json(result.rows);
     } catch (error) {
