@@ -76,3 +76,6 @@ SELECT name FROM users WHERE id = 1;
 
 SELECT r.*, ARRAY_AGG(t.tag) AS tags FROM resources r INNER JOIN tags t ON r.id = t.resource_id GROUP BY r.id;
 
+SELECT r.*, ARRAY_AGG(t.tag) AS tags, u.name AS recommender_name FROM resources r INNER JOIN tags t ON r.id = t.resource_id INNER JOIN 
+users u ON r.recommender_id = u.id  GROUP BY r.id, u.name ORDER BY r.date_added DESC;
+
