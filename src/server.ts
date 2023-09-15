@@ -83,7 +83,7 @@ app.get("/study_list/:userid", async (req, res) => {
     try {
         const { userid } = req.params;
         const text =
-            "select r.*, ARRAY_AGG(t.tag) as tags, u.name as recommender_name from resources r inner join tags t on r.id = t.resource_id inner join users u on r.recommender_id = u.id inner join study_list s on r.id = s.resource_id  where u.id = $1 group by r.id, u.name order by r.date_added desc;";
+            "select r.*, ARRAY_AGG(t.tag) as tags, u.name as recommender_name from resources r inner join tags t on r.id = t.resource_id inner join users u on r.recommender_id = u.id inner join study_list s on r.id = s.resource_id  where s.user_id = $1 group by r.id, u.name order by r.date_added desc;";
         const values = [userid];
         const result = await client.query(text, values);
         res.status(200).json(result.rows);
