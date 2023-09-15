@@ -180,25 +180,6 @@ app.post("/study_list/:userid/:resourceid", async (req, res) => {
     }
 });
 
-// app.post("/tags/:resourceid", async (req, res) => {
-//     try {
-//         const { resourceid } = req.params;
-//         const { tags } = req.body;
-//         const tagArray = tags.replace(" ", "").split(",");
-
-//         for (const tag of tagArray) {
-//             const text = "INSERT INTO tags VALUES ($1, $2)";
-//             const values = [resourceid, tag];
-//             await client.query(text, values);
-//         }
-
-//         res.status(200).send("The tags have been added");
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).send("An error occurred. Check server logs.");
-//     }
-// });
-
 app.delete("/study_list/:userid/:resourceid", async (req, res) => {
     try {
         const { userid, resourceid } = req.params;
@@ -230,6 +211,13 @@ app.delete("/resources/cypress", async (_req, res) => {
     try {
         const url =
             "https://docs.cypress.io/guides/end-to-end-testing/writing-your-first-end-to-end-test";
+        const resource_id = await client.query(
+            "select id from resources where url = $1",
+            [url]
+        );
+        await client.query("delete from tags where resource_id = $1", [
+            resource_id.rows[0].id,
+        ]);
         const text = "DELETE FROM resources WHERE url = $1";
         const values = [url];
         const result = await client.query(text, values);
