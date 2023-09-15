@@ -133,9 +133,9 @@ app.post("/resources/new", async (req, res) => {
             recommender_comment,
             recommender_reason,
         } = req.body;
-        const text =
+        const resourceText =
             "INSERT INTO resources (resource_name, author_name, url, description, content_type, build_phase, recommender_id, recommender_comment, recommender_reason) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *";
-        const values = [
+        const resourceValues = [
             resource_name,
             author_name,
             url,
@@ -146,11 +146,24 @@ app.post("/resources/new", async (req, res) => {
             recommender_comment,
             recommender_reason,
         ];
-        const result = await client.query(text, values);
+        const result = await client.query(resourceText, resourceValues);
+
+        // Add provided tags for the newly created resource:
+        const resourceid = result.rows[0].id;
+        const { tags } = req.body;
+        const tagArray = tags.replace(" ", "").split(",");
+
+        for (const tag of tagArray) {
+            const tagsText = "INSERT INTO tags VALUES ($1, $2)";
+            const tagsValues = [resourceid, tag];
+            await client.query(tagsText, tagsValues);
+        }
+
         res.status(200).json(result.rows);
     } catch (error) {
         console.error(error);
-        res.status(500).send("An error occurred. Check server logs.");
+        // res.status(500).send("An error occurred. Check server logs.");
+        res.status(500).json(error);
     }
 });
 
@@ -167,24 +180,24 @@ app.post("/study_list/:userid/:resourceid", async (req, res) => {
     }
 });
 
-app.post("/tags/:resourceid", async (req, res) => {
-    try {
-        const { resourceid } = req.params;
-        const { tags } = req.body;
-        const tagArray = tags.replace(" ", "").split(",");
+// app.post("/tags/:resourceid", async (req, res) => {
+//     try {
+//         const { resourceid } = req.params;
+//         const { tags } = req.body;
+//         const tagArray = tags.replace(" ", "").split(",");
 
-        for (const tag of tagArray) {
-            const text = "INSERT INTO tags VALUES ($1, $2)";
-            const values = [resourceid, tag];
-            await client.query(text, values);
-        }
+//         for (const tag of tagArray) {
+//             const text = "INSERT INTO tags VALUES ($1, $2)";
+//             const values = [resourceid, tag];
+//             await client.query(text, values);
+//         }
 
-        res.status(200).send("The tags have been added");
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("An error occurred. Check server logs.");
-    }
-});
+//         res.status(200).send("The tags have been added");
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).send("An error occurred. Check server logs.");
+//     }
+// });
 
 app.delete("/study_list/:userid/:resourceid", async (req, res) => {
     try {
