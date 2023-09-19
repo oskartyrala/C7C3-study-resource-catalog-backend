@@ -142,7 +142,7 @@ app.post("/resources/new", async (req, res) => {
             url,
             description,
             content_type,
-            build_phase || 0,
+            build_phase,
             recommender_id,
             recommender_comment,
             recommender_reason,
