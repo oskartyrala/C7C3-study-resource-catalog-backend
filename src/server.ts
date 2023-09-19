@@ -171,7 +171,8 @@ app.post("/resources/new", async (req, res) => {
 app.post("/study_list/:userid/:resourceid", async (req, res) => {
     try {
         const { userid, resourceid } = req.params;
-        const text = "INSERT INTO study_list VALUES ($1, $2) RETURNING *";
+        const text =
+            "insert into study_list(user_id, resource_id) select $1, $2 where not exists(select user_id, resource_id from study_list where user_id = $1 and resource_id = $2)";
         const values = [userid, resourceid];
         const result = await client.query(text, values);
         res.status(200).json(result.rows);
