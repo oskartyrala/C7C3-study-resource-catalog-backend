@@ -32,11 +32,37 @@ app.get("/health-check", async (_req, res) => {
     }
 });
 
+app.get("/resources/count", async (_req, res) => {
+    try {
+        const text = "SELECT COUNT(*) FROM resources";
+        const result = await client.query(text);
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
 app.get("/resources", async (_req, res) => {
     try {
         const text =
             "SELECT r.*, ARRAY_AGG(t.tag) AS tags, u.name AS recommender_name FROM resources r INNER JOIN tags t ON r.id = t.resource_id INNER JOIN users u ON r.recommender_id = u.id  GROUP BY r.id, u.name ORDER BY r.date_added DESC";
         const result = await client.query(text);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.get("/resources/pages/:page", async (req, res) => {
+    try {
+        const { page } = req.params;
+        const offset = (parseInt(page) - 1) * 10;
+        const text =
+            "SELECT r.*, ARRAY_AGG(t.tag) AS tags, u.name AS recommender_name FROM resources r INNER JOIN tags t ON r.id = t.resource_id INNER JOIN users u ON r.recommender_id = u.id  GROUP BY r.id, u.name ORDER BY r.date_added DESC OFFSET $1 LIMIT 10";
+        const values = [offset];
+        const result = await client.query(text, values);
         res.status(200).json(result.rows);
     } catch (error) {
         console.error(error);
