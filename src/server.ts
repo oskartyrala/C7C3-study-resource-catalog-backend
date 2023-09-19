@@ -152,9 +152,8 @@ app.post("/resources/new", async (req, res) => {
         // Add provided tags for the newly created resource:
         const resourceid = result.rows[0].id;
         const { tags } = req.body;
-        const tagArray = tags.replace(" ", "").split(",");
 
-        for (const tag of tagArray) {
+        for (const tag of tags) {
             const tagsText = "INSERT INTO tags VALUES ($1, $2)";
             const tagsValues = [resourceid, tag];
             await client.query(tagsText, tagsValues);
