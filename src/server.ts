@@ -32,12 +32,142 @@ app.get("/health-check", async (_req, res) => {
     }
 });
 
-app.get("/resources", async (_req, res) => {
+app.get("/resources/filter/pages/:page", async (req, res) => {
     try {
+        const { page } = req.params;
+        const { typedSearch, searchTags, userId } = req.query;
+        const likeSearch = `%${typedSearch}%`;
+
+        const offset = (parseInt(page) - 1) * 10;
+
         const text =
-            "SELECT r.*, ARRAY_AGG(t.tag) AS tags, u.name AS recommender_name FROM resources r INNER JOIN tags t ON r.id = t.resource_id INNER JOIN users u ON r.recommender_id = u.id  GROUP BY r.id, u.name ORDER BY r.date_added DESC";
-        const result = await client.query(text);
+            userId === "0"
+                ? // Query for browse mode, without logging in:
+                  `SELECT r.*, 
+                          ARRAY_AGG(t.tag) AS tags, 
+                          u.name AS recommender_name
+                    FROM resources r 
+                        INNER JOIN tags t 
+                        ON r.id = t.resource_id 
+                            INNER JOIN users u 
+                            ON r.recommender_id = u.id 
+                                LEFT JOIN (SELECT resource_id, 
+                                                  MAX(user_id) AS user_id
+                                            FROM study_list 
+                                            GROUP BY resource_id) s 
+                                ON r.id = s.resource_id 
+                    WHERE ($3 = 0 OR s.user_id = $3) 
+                    AND (r.resource_name LIKE $1 
+                    OR r.author_name LIKE $1 
+                    OR r.description LIKE $1 
+                    OR t.tag LIKE $1) GROUP BY r.id, u.name, s.user_id 
+                    ${
+                        searchTags
+                            ? "HAVING SUM(CASE WHEN t.tag = ANY($4::text[]) THEN 1 ELSE 0 END) > 0"
+                            : ""
+                    }  
+                    ORDER BY r.date_added DESC
+                    OFFSET $2 LIMIT 10`
+                : // Query for studyList mode, when viewing the user's study list:
+                  `SELECT r.*, 
+                          ARRAY_AGG(t.tag) AS tags, 
+                          u.name AS recommender_name
+                    FROM resources r 
+                        INNER JOIN tags t 
+                        ON r.id = t.resource_id 
+                            INNER JOIN users u 
+                            ON r.recommender_id = u.id 
+                                INNER JOIN (SELECT resource_id, 
+                                                   user_id
+                                            FROM study_list 
+                                            GROUP BY resource_id, user_id) s 
+                                ON r.id = s.resource_id 
+                    WHERE ($3 = 0 OR s.user_id = $3) 
+                    AND (r.resource_name LIKE $1 
+                    OR r.author_name LIKE $1 
+                    OR r.description LIKE $1 
+                    OR t.tag LIKE $1) 
+                    GROUP BY r.id, u.name, s.user_id 
+                    ${
+                        searchTags
+                            ? "HAVING SUM(CASE WHEN t.tag = ANY($4::text[]) THEN 1 ELSE 0 END) > 0"
+                            : ""
+                    }  
+                    OFFSET $2 
+                    LIMIT 10`;
+
+        const values = [likeSearch, offset, userId];
+        if (searchTags) values.push(searchTags);
+
+        const result = await client.query(text, values);
+
         res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.get("/resources/filter/count", async (req, res) => {
+    try {
+        const { typedSearch, searchTags, userId } = req.query;
+
+        const likeSearch = `%${typedSearch}%`;
+
+        const text =
+            userId === "0"
+                ? // Query for browse mode, without logging in:
+                  `SELECT COUNT(*) 
+                    FROM (SELECT DISTINCT r.id
+                        FROM resources r 
+                            INNER JOIN tags t 
+                            ON r.id = t.resource_id 
+                                LEFT JOIN (SELECT resource_id, 
+                                                MAX(user_id) AS user_id 
+                                            FROM study_list 
+                                            GROUP BY resource_id) s 
+                                ON r.id = s.resource_id
+                        WHERE ($2 = 0 OR s.user_id = $2)
+                        AND (r.resource_name LIKE $1 
+                        OR r.author_name LIKE $1
+                        OR r.description LIKE $1
+                        OR t.tag LIKE $1) 
+                    GROUP BY r.id, s.user_id, s.resource_id
+                    ${
+                        searchTags
+                            ? "HAVING SUM(CASE WHEN t.tag = ANY($3::text[]) THEN 1 ELSE 0 END) > 0"
+                            : ""
+                    }
+                    ) as resource_count`
+                : // Query for studyList mode, when viewing the user's study list:
+                  `SELECT COUNT(*) 
+                    FROM (SELECT DISTINCT r.id
+                        FROM resources r 
+                            INNER JOIN tags t 
+                            ON r.id = t.resource_id 
+                                INNER JOIN (SELECT resource_id, 
+                                                   user_id 
+                                            FROM study_list 
+                                            GROUP BY resource_id, user_id) s 
+                                ON r.id = s.resource_id
+                    WHERE ($2 = 0 OR s.user_id = $2  )
+                    AND (r.resource_name LIKE $1 
+                    OR r.author_name LIKE $1
+                    OR r.description LIKE $1
+                    OR t.tag LIKE $1) 
+                GROUP BY r.id, s.user_id, s.resource_id
+                ${
+                    searchTags
+                        ? "HAVING SUM(CASE WHEN t.tag = ANY($3::text[]) THEN 1 ELSE 0 END) > 0"
+                        : ""
+                }
+                ) as resource_count`;
+
+        const values = [likeSearch, userId];
+        if (searchTags) values.push(searchTags);
+
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error(error);
         res.status(500).send("An error occurred. Check server logs.");
@@ -59,33 +189,6 @@ app.get("/tags", async (_req, res) => {
     try {
         const text = "SELECT tag FROM tags GROUP BY tag ORDER BY COUNT(*) DESC";
         const result = await client.query(text);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("An error occurred. Check server logs.");
-    }
-});
-
-app.get("/tags/:resource_id", async (req, res) => {
-    try {
-        const { resource_id } = req.params;
-        const text = "SELECT * FROM tags WHERE resource_id = $1";
-        const values = [resource_id];
-        const result = await client.query(text, values);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("An error occurred. Check server logs.");
-    }
-});
-
-app.get("/study_list/:userid", async (req, res) => {
-    try {
-        const { userid } = req.params;
-        const text =
-            "select r.*, ARRAY_AGG(t.tag) as tags, u.name as recommender_name from resources r inner join tags t on r.id = t.resource_id inner join users u on r.recommender_id = u.id inner join study_list s on r.id = s.resource_id  where s.user_id = $1 group by r.id, u.name order by r.date_added desc;";
-        const values = [userid];
-        const result = await client.query(text, values);
         res.status(200).json(result.rows);
     } catch (error) {
         console.error(error);
@@ -162,7 +265,6 @@ app.post("/resources/new", async (req, res) => {
         res.status(200).json(result.rows);
     } catch (error) {
         console.error(error);
-        // res.status(500).send("An error occurred. Check server logs.");
         res.status(500).json(error);
     }
 });
@@ -197,19 +299,6 @@ app.delete("/study_list/:userid/:resourceid", async (req, res) => {
         const text =
             "DELETE FROM study_list WHERE user_id = $1 AND resource_id = $2 RETURNING *";
         const values = [userid, resourceid];
-        const result = await client.query(text, values);
-        res.status(200).json(result.rows);
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("An error occurred. Check server logs.");
-    }
-});
-
-app.get("/user/:userid", async (req, res) => {
-    try {
-        const { userid } = req.params;
-        const text = "SELECT name FROM users WHERE id = $1";
-        const values = [userid];
         const result = await client.query(text, values);
         res.status(200).json(result.rows);
     } catch (error) {
