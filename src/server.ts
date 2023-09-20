@@ -70,6 +70,48 @@ app.get("/resources/pages/:page", async (req, res) => {
     }
 });
 
+app.get("/resources/filter/pages/:page", async (req, res) => {
+    try {
+        const { page } = req.params;
+        const { typedSearch, searchTags } = req.body;
+        const offset = (parseInt(page) - 1) * 10;
+        let text =
+            "SELECT r.*, ARRAY_AGG(t.tag) AS tags, u.name AS recommender_name FROM resources r INNER JOIN tags t ON r.id = t.resource_id INNER JOIN users u ON r.recommender_id = u.id WHERE  (r.resource_name LIKE $1 OR r.author_name LIKE $1 OR r.description LIKE $1 OR t.tag LIKE $1) GROUP BY r.id, u.name";
+        const values = [typedSearch, offset];
+        if (searchTags.length > 0) {
+            text +=
+                " HAVING SUM(CASE WHEN t.tag = ANY($3::text[]) THEN 1 ELSE 0 END) > 0 ";
+            values.push(searchTags);
+        }
+        text += " ORDER BY r.date_added DESC OFFSET $2 LIMIT 10";
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
+app.get("/resources/filter/count", async (req, res) => {
+    try {
+        const { typedSearch, searchTags } = req.body;
+        let text =
+            "SELECT COUNT(*) FROM (SELECT r.*, ARRAY_AGG(t.tag) AS tags, u.name AS recommender_name FROM resources r INNER JOIN tags t ON r.id = t.resource_id INNER JOIN users u ON r.recommender_id = u.id WHERE  (r.resource_name LIKE $1 OR r.author_name LIKE $1 OR r.description LIKE $1 OR t.tag LIKE $1) GROUP BY r.id, u.name";
+        const values = [typedSearch];
+        if (searchTags.length > 0) {
+            text +=
+                " HAVING SUM(CASE WHEN t.tag = ANY($2::text[]) THEN 1 ELSE 0 END) > 0 ";
+            values.push(searchTags);
+        }
+        text += ") as resource_count";
+        const result = await client.query(text, values);
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("An error occurred. Check server logs.");
+    }
+});
+
 app.get("/users", async (_req, res) => {
     try {
         const text = "SELECT * FROM users";

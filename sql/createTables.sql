@@ -87,3 +87,29 @@ users u on r.recommender_id = u.id inner join  study_list s on r.id = s.resource
 group by r.id, u.name order by r.date_added desc;
 
 insert into study_list(user_id, resource_id) select 1, 114 where not exists(select user_id, resource_id from study_list where user_id = 1 and resource_id = 114);
+
+SELECT r.*, ARRAY_AGG(t.tag) AS tags, u.name AS recommender_name 
+FROM resources r 
+INNER JOIN tags t 
+ON r.id = t.resource_id 
+INNER JOIN users u 
+ON r.recommender_id = u.id
+WHERE  (r.resource_name LIKE '%e%'
+OR r.author_name LIKE '%e%'
+OR r.description LIKE '%e%'
+OR t.tag LIKE '%e%')
+GROUP BY r.id, u.name 
+HAVING
+    SUM(CASE WHEN t.tag in('react','CSS') THEN 1 ELSE 0 END) > 0
+ORDER BY r.date_added DESC;
+
+SELECT count(*)
+FROM resources r 
+INNER JOIN tags t 
+ON r.id = t.resource_id 
+WHERE  (r.resource_name LIKE '%e%'
+OR r.author_name LIKE '%e%'
+OR r.description LIKE '%e%'
+OR t.tag LIKE '%e%')
+HAVING
+    SUM(CASE WHEN t.tag in('react','CSS') THEN 1 ELSE 0 END) > 0;
