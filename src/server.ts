@@ -71,14 +71,15 @@ app.get("/resources/pages/:page", async (req, res) => {
 });
 
 app.get("/resources/filter/pages/:page", async (req, res) => {
+    console.log(req.query.searchTags);
     try {
         const { page } = req.params;
-        const { typedSearch, searchTags } = req.body;
+        const { typedSearch, searchTags } = req.query;
         const offset = (parseInt(page) - 1) * 10;
         let text =
             "SELECT r.*, ARRAY_AGG(t.tag) AS tags, u.name AS recommender_name FROM resources r INNER JOIN tags t ON r.id = t.resource_id INNER JOIN users u ON r.recommender_id = u.id WHERE  (r.resource_name LIKE $1 OR r.author_name LIKE $1 OR r.description LIKE $1 OR t.tag LIKE $1) GROUP BY r.id, u.name";
         const values = [typedSearch, offset];
-        if (searchTags.length > 0) {
+        if ((searchTags as string[]).length > 0) {
             text +=
                 " HAVING SUM(CASE WHEN t.tag = ANY($3::text[]) THEN 1 ELSE 0 END) > 0 ";
             values.push(searchTags);
