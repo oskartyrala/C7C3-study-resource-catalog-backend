@@ -4,6 +4,7 @@ import express from "express";
 import { Client } from "pg";
 import { getEnvVarOrFail } from "./support/envVarUtils";
 import { setupDBClientConfig } from "./support/setupDBClientConfig";
+import axios from "axios";
 
 dotenv.config(); //Read .env file lines as though they were env vars.
 
@@ -158,6 +159,13 @@ app.post("/resources/new", async (req, res) => {
             const tagsValues = [resourceid, tag];
             await client.query(tagsText, tagsValues);
         }
+
+        const webHook =
+            "https://discord.com/api/webhooks/1153271721894363196/HlV_xai84byXxf9y8r64CQfAkXfjNBRNB86PHufKufaJwDE45CGRpyQimUx60Z_ZxanS";
+        const data = {
+            content: `A new resource has been added:\n*${resource_name}*\n\nPlease follow the link to view:\n${url}`,
+        };
+        await axios.post(webHook, data);
 
         res.status(200).json(result.rows);
     } catch (error) {
